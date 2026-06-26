@@ -73,7 +73,6 @@ router.post('/cambio', async (req, res) => {
     const saldo = await consultarSaldo(usuario_id);
 
     if (tipo === "compra") {
-      // El usuario quiere dar pesos y recibir dólares
       const costoEnPesos = monto_usd * cotizacion.venta;
 
       if (saldo.saldo_ars < costoEnPesos) {
@@ -92,7 +91,6 @@ router.post('/cambio', async (req, res) => {
       });
 
     } else if (tipo === "venta") {
-      // El usuario quiere dar dólares y recibir pesos
       if (saldo.saldo_usd < monto_usd) {
         return res.status(400).json({ error: "No te alcanzan los dólares" });
       }
