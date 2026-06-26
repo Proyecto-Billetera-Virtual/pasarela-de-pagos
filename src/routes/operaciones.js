@@ -60,4 +60,63 @@ router.post('/confirmar-transferencia', async (req, res) => {
   }
 });
 
+const { obtenerCotizacion } = require('../services/dolarApi');
+
+router.post('/cambio', async (req, res) => {
+  try {
+    const { usuario_id, tipo, monto_usd } = req.body; // tipo: "compra" o "venta"
+
+    // 1. Pido la cotización real (ignoro cualquier precio que venga del Front)
+    const cotizacion = await obtenerCotizacion();
+
+    // 2. Reviso el saldo actual del usuario
+    const saldo = await consultarSaldo(usuario_id);
+
+    if (tipo === "compra") {
+      // El usuario quiere dar pesos y recibir dólares
+      const costoEnPesos = monto_usd * cotizacion.venta;
+
+      if (saldo.saldo_ars < costoEnPesos) {
+        return res.status(400).json({ error: "No te alcanzan los pesos" });
+      }
+
+      await actualizarSaldo(usuario_id, "ARS", -costoEnPesos);
+      await actualizarSaldo(usuario_id, "USD", monto_usd);
+
+      return res.json({
+        status: "success",
+        operacion: "compra",
+        monto_usd,
+        costo_ars: costoEnPesos,
+        cotizacion_usada: cotizacion.venta
+      });
+
+    } else if (tipo === "venta") {
+      // El usuario quiere dar dólares y recibir pesos
+      if (saldo.saldo_usd < monto_usd) {
+        return res.status(400).json({ error: "No te alcanzan los dólares" });
+      }
+
+      const recibidoEnPesos = monto_usd * cotizacion.compra;
+
+      await actualizarSaldo(usuario_id, "USD", -monto_usd);
+      await actualizarSaldo(usuario_id, "ARS", recibidoEnPesos);
+
+      return res.json({
+        status: "success",
+        operacion: "venta",
+        monto_usd,
+        recibido_ars: recibidoEnPesos,
+        cotizacion_usada: cotizacion.compra
+      });
+
+    } else {
+      return res.status(400).json({ error: "Tipo de operación inválido, usá 'compra' o 'venta'" });
+    }
+
+  } catch (error) {
+    res.status(500).json({ error: "Algo falló: " + error.message });
+  }
+});
+
 module.exports = router;
