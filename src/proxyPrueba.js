@@ -7,8 +7,17 @@ app.get('/api/interno/saldo/:id', (req, res) => {
   res.json({ saldo_ars: 5000, saldo_usd: 100 });
 });
 
+let contador = 0;
+
 app.post('/api/interno/actualizar-saldo', (req, res) => {
-  console.log('Actualización pedida:', req.body);
+  contador++;
+  console.log(`Llamada número ${contador}:`, req.body);
+
+  if (contador === 2) {
+    // Simulo que la segunda llamada siempre falla
+    return res.status(500).json({ error: "Fallo simulado" });
+  }
+
   res.json({ status: "ok" });
 });
 
