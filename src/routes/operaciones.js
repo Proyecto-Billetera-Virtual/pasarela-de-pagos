@@ -119,4 +119,33 @@ router.post('/cambio', async (req, res) => {
   }
 });
 
+router.post('/pagar', async (req, res) => {
+  try {
+    const { usuario_id, servicio, monto } = req.body;
+
+    // 1. Reviso el saldo en pesos del usuario
+    const saldo = await consultarSaldo(usuario_id);
+
+    if (saldo.saldo_ars < monto) {
+      return res.status(400).json({ error: "Saldo insuficiente" });
+    }
+
+    // 2. Descuento el monto de la cuenta en pesos
+    await actualizarSaldo(usuario_id, "ARS", -monto);
+
+    // 3. Devuelvo un comprobante simulado
+    res.json({
+      status: "pagado",
+      comprobante: {
+        servicio,
+        monto,
+        fecha: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    res.status(500).json({ error: "Algo falló: " + error.message });
+  }
+});
+
 module.exports = router;
