@@ -7,12 +7,15 @@ async function consultarSaldo(usuarioId) {
 }
 
 async function actualizarSaldo(usuarioId, moneda, monto) {
-  // le pido al Proxy: "actualizá el saldo de este usuario"
-  // si monto es negativo, le estoy restando plata. Si es positivo, le estoy sumando.
+  // Determino si es SUMAR o RESTAR según el signo del monto
+  const accion = monto >= 0 ? "SUMAR" : "RESTAR";
+  const montoAbsoluto = Math.abs(monto); // siempre positivo
+
   const respuesta = await axios.post(`${process.env.PROXY_URL}/api/interno/actualizar-saldo`, {
     usuario_id: usuarioId,
+    accion: accion,
     moneda: moneda,
-    monto: monto
+    monto: montoAbsoluto
   });
   return respuesta.data;
 }

@@ -5,6 +5,15 @@ const { enviarCodigoTransferencia } = require('../services/mailer');
 const transferenciasPendientes = require('../store/transferenciasPendientes');
 const { obtenerCotizacion } = require('../services/dolarApi');
 
+router.get('/cotizacion', async (req, res) => {
+  try {
+    const cotizacion = await obtenerCotizacion();
+    res.json(cotizacion);
+  } catch (error) {
+    res.status(500).json({ error: "Error al obtener cotización: " + error.message });
+  }
+});
+
 router.post('/transferir', async (req, res) => {
   try {
     const { usuario_origen_id, destino_cvu, monto, moneda, email_origen } = req.body;
@@ -28,10 +37,10 @@ router.post('/transferir', async (req, res) => {
   }
 });
 
-router.post('/confirmar-transferencia', async (req, res) => {
+router.post('/confirmar', async (req, res) => {
   try {
-    const { codigo } = req.body;
-    const transferencia = transferenciasPendientes[codigo];
+    const { codigo_correo } = req.body;
+    const transferencia = transferenciasPendientes[codigo_correo];
     if (!transferencia) {
       return res.status(400).json({ error: "Código inválido o ya usado" });
     }
@@ -49,7 +58,7 @@ router.post('/confirmar-transferencia', async (req, res) => {
       throw new Error("La transferencia falló en el paso final y fue revertida. No se perdió dinero.");
     }
 
-    delete transferenciasPendientes[codigo];
+    delete transferenciasPendientes[codigo_correo];
     res.json({ status: "success" });
   } catch (error) {
     res.status(500).json({ error: "Algo falló: " + error.message });
@@ -58,11 +67,27 @@ router.post('/confirmar-transferencia', async (req, res) => {
 
 router.post('/cambio', async (req, res) => {
   try {
-    const { usuario_id, tipo, monto_usd } = req.body; // tipo: "compra" o "venta"
-    const cotizacion = await obtenerCotizacion();
-    const saldo = await consultarSaldo(usuario_id);
+    // 1. Extraer datos del body
+    const { usuario_id, tipo, monto_usd } = req.body;
+    console.log('[Pasarela] Request received:', { usuario_id, tipo, monto_usd });
 
-    if (tipo === "compra") {
+    if (!usuario_id || !tipo || !monto_usd) {
+      console.log('[Pasarela] Error: Faltan campos obligatorios');
+      return res.status(400).json({ error: "Faltan campos obligatorios" });
+    }
+
+    // 2. Consultar saldo al Backend
+    console.log('[Pasarela] Obteniendo saldo para usuario:', usuario_id);
+    const saldoResponse = await axios.get(`${process.env.PROXY_URL}/api/interno/saldo/${usuario_id}`);
+    const saldo = saldoResponse.data;
+    console.log('[Pasarela] Saldo recibido:', saldo);
+
+    // 3. Obtener cotización
+    console.log('[Pasarela] Obteniendo cotización del dólar');
+    const cotizacion = await obtenerCotizacion();
+    console.log('[Pasarela] Cotización recibida:', cotizacion);
+
+    if (tipo === "COMPRA") {
       const costoEnPesos = monto_usd * cotizacion.venta;
       if (saldo.saldo_ars < costoEnPesos) {
         return res.status(400).json({ error: "No te alcanzan los pesos" });
@@ -85,7 +110,7 @@ router.post('/cambio', async (req, res) => {
         cotizacion_usada: cotizacion.venta
       });
 
-    } else if (tipo === "venta") {
+    } else if (tipo === "VENTA") {
       if (saldo.saldo_usd < monto_usd) {
         return res.status(400).json({ error: "No te alcanzan los dólares" });
       }

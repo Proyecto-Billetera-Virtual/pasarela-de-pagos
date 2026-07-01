@@ -6,7 +6,7 @@ const app = express();
 
 app.use(express.json());
 
-app.use('/api/operaciones', operacionesRouter);
+app.use('/operaciones', operacionesRouter);
 
 app.listen(process.env.PORT, () => {
   console.log(`Pasarela corriendo en el puerto ${process.env.PORT}`);
