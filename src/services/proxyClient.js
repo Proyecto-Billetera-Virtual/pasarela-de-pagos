@@ -1,20 +1,54 @@
 const axios = require('axios');
 
+const PROXY_URL = process.env.PROXY_URL;
+
 async function consultarSaldo(usuarioId) {
-  // le pregunto al Proxy: "¿cuánto tiene este usuario?"
-  const respuesta = await axios.get(`${process.env.PROXY_URL}/api/interno/saldo/${usuarioId}`);
-  return respuesta.data; // esto va a ser algo como { saldo_ars: 5000, saldo_usd: 100 }
+  const respuesta = await axios.get(`${PROXY_URL}/api/interno/saldo/${usuarioId}`);
+  return respuesta.data;
 }
 
 async function actualizarSaldo(usuarioId, moneda, monto) {
-  // le pido al Proxy: "actualizá el saldo de este usuario"
-  // si monto es negativo, le estoy restando plata. Si es positivo, le estoy sumando.
-  const respuesta = await axios.post(`${process.env.PROXY_URL}/api/interno/actualizar-saldo`, {
+  const respuesta = await axios.post(`${PROXY_URL}/api/interno/actualizar-saldo`, {
     usuario_id: usuarioId,
     moneda: moneda,
-    monto: monto
+    monto: monto,
   });
   return respuesta.data;
 }
 
-module.exports = { consultarSaldo, actualizarSaldo };
+async function buscarUsuario(email) {
+  const respuesta = await axios.post(`${PROXY_URL}/api/interno/usuarios/buscar`, { email });
+  return respuesta.data;
+}
+
+async function crearOperacionPendiente(tipo, email_usuario, datos_json) {
+  const respuesta = await axios.post(`${PROXY_URL}/api/interno/operaciones/crear`, {
+    tipo,
+    email_usuario,
+    datos_json,
+  });
+  return respuesta.data;
+}
+
+async function confirmarOperacionPendiente(email_usuario, codigo, tipo) {
+  const respuesta = await axios.post(`${PROXY_URL}/api/interno/operaciones/confirmar`, {
+    email_usuario,
+    codigo,
+    tipo,
+  });
+  return respuesta.data;
+}
+
+async function registrarMovimiento(usuario_id, tipo, moneda, monto, saldo_resultante, descripcion) {
+  const respuesta = await axios.post(`${PROXY_URL}/api/interno/registrar-movimiento`, {
+    usuario_id,
+    tipo,
+    moneda,
+    monto,
+    saldo_resultante,
+    descripcion,
+  });
+  return respuesta.data;
+}
+
+module.exports = { consultarSaldo, actualizarSaldo, buscarUsuario, crearOperacionPendiente, confirmarOperacionPendiente, registrarMovimiento };
