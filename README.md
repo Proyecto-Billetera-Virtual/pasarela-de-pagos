@@ -7,12 +7,36 @@ Este servicio **no tiene acceso directo a la base de datos**.
 Toda consulta o modificación de saldo se hace a través del Proxy,
 que a su vez habla con el Backend.
 
-## Variables de entorno (.env)
+## Docker
 
-- PORT: puerto en el que corre este servicio
-- PROXY_URL: URL del Proxy
-- EXTERNAL_DOLAR_API: API externa de cotización del dólar
-- EMAIL_HOST / EMAIL_PORT / EMAIL_USER / EMAIL_PASS: configuración SMTP (Mailtrap)
+### Construir la imagen
+```bash
+docker build -t billetera-pasarela .
+```
+
+### Ejecutar en una PC de la LAN
+```bash
+docker rm -f pasarela 2>/dev/null
+docker run -d --name pasarela \
+  -e PROXY_URL=http://<IP_DEL_PROXY>:8080 \
+  -e EMAIL_USER=tu_email@gmail.com \
+  -e EMAIL_PASS=tu_contraseña \
+  -p 6000:6000 \
+  billetera-pasarela
+```
+
+Reemplazar `<IP_DEL_PROXY>` por la IP de la PC donde corre el proxy.
+
+### Variables de entorno
+| Variable | Descripción | Default |
+|---|---|---|
+| `PORT` | Puerto del servidor | `6000` |
+| `PROXY_URL` | URL del proxy (rutas internas) | `http://localhost:8080` |
+| `EXTERNAL_DOLAR_API` | API de cotización del dólar | `https://dolarapi.com/v1/dolares/oficial` |
+| `EMAIL_HOST` | Servidor SMTP | `smtp.gmail.com` |
+| `EMAIL_PORT` | Puerto SMTP | `587` |
+| `EMAIL_USER` | Usuario SMTP | `billeteravirtu@gmail.com` |
+| `EMAIL_PASS` | Contraseña SMTP | `okisutfkaqjnuuni` |
 
 ## Endpoints
 
